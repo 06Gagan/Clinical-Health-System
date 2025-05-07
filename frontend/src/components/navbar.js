@@ -7,7 +7,7 @@ const Navbar = (props) => {
       className={`navbar navbar-expand-lg navbar-${props.mode} bg-${props.mode} mb-3`}
     >
       <div className="container-fluid">
-        <NavLink className="navbar-brand" to="/CRC">
+        <NavLink className="navbar-brand" to={props.role === 'CRC' ? "/CRC" : "/PI"}>
           <strong>{props.title}</strong>
         </NavLink>
         <button
@@ -23,21 +23,35 @@ const Navbar = (props) => {
         </button>
         <div className="collapse navbar-collapse" id="navbarSupportedContent">
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <li className="nav-item">
-              <NavLink className="nav-link" to="/CRC">
-                Demographic Data
-              </NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink className="nav-link" to="/Scheduling">
-                Schedule Visits
-              </NavLink>
-            </li>
-            <li className="nav-item">
-              <NavLink className="nav-link" to="/HealthData">
-                Take Health Data
-              </NavLink>
-            </li>
+            {props.role === 'CRC' ? (
+              // Links for CRC users
+              <>
+                <li className="nav-item">
+                  <NavLink className="nav-link" to="/CRC">
+                    Demographic Data
+                  </NavLink>
+                </li>
+                <li className="nav-item">
+                  <NavLink className="nav-link" to="/Scheduling">
+                    Schedule Trials
+                  </NavLink>
+                </li>
+                <li className="nav-item">
+                  <NavLink className="nav-link" to="/HealthData">
+                    Record Health Data
+                  </NavLink>
+                </li>
+              </>
+            ) : (
+              // Links for PI users
+              <>
+                <li className="nav-item">
+                  <NavLink className="nav-link" to="/PI">
+                    Dashboard
+                  </NavLink>
+                </li>
+              </>
+            )}
             <li className="nav-item">
               <NavLink className="nav-link" to="/Logout">
                 Logout
@@ -59,7 +73,7 @@ const Navbar = (props) => {
               className="form-check-label"
               htmlFor="flexSwitchCheckDefault"
             >
-              {`Enable ${props.mode === "light" ? "dark" : "light"}-Mode`}
+              {`Enable ${props.mode === "light" ? "dark" : "light"} Mode`}
             </label>
           </div>
         </div>

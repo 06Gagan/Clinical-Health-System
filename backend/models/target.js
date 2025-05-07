@@ -9,7 +9,7 @@ const createTrial = async (trial_name) => {
   return result.rows[0].id;
 };
 
-const addTargetParticipants  = async (trialId, participantIds) => {
+const addTargetParticipants = async (trialId, participantIds) => {
   const query = `
     INSERT INTO target_participate (trial_id, person_id) 
     VALUES ($1, $2)
@@ -19,4 +19,4 @@ const addTargetParticipants  = async (trialId, participantIds) => {
   }
 };
 
-module.exports = { createTrial, addTargetParticipants  };
+module.exports = { createTrial, addTargetParticipants };

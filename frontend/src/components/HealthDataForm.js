@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { apiCall } from '../config/api';
 
 function HealthDataForm() {
   const [formData, setFormData] = useState({
@@ -11,6 +12,7 @@ function HealthDataForm() {
   });
 
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // Handle input change
   const handleChange = (e) => {
@@ -22,40 +24,33 @@ function HealthDataForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
+    setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/health", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+      await apiCall('/crc/health', 'POST', formData);
+      setMessage("Health data submitted successfully!");
+      setFormData({
+        person_id: "",
+        heart_rate: "",
+        blood_pressure_systolic: "",
+        blood_pressure_diastolic: "",
+        respiratory_rate: "",
+        body_temperature: "",
       });
-
-      if (response.ok) {
-        setMessage("Health data submitted successfully!");
-        setFormData({
-          person_id: "",
-          heart_rate: "",
-          blood_pressure_systolic: "",
-          blood_pressure_diastolic: "",
-          respiratory_rate: "",
-          body_temperature: "",
-        });
-      } else {
-        setMessage("Failed to submit health data.");
-      }
     } catch (error) {
-      console.error("Error submitting health data:", error);
-      setMessage("An error occurred while submitting the form.");
+      setMessage("Failed to submit health data: " + (error?.response?.data?.error || error.message || "Unknown error"));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="container">
-      <h2>Enter Health Data</h2>
+    <div className="container mt-4">
+      <h2 className="text-center mb-4">Enter Health Data</h2>
+      {message && <div className={message.includes("successfully") ? "alert alert-success" : "alert alert-danger"}>{message}</div>}
+      
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
+        <div className="form-group mb-3">
           <label>Person ID</label>
           <input
             type="text"
@@ -64,9 +59,10 @@ function HealthDataForm() {
             onChange={handleChange}
             className="form-control"
             required
+            disabled={loading}
           />
         </div>
-        <div className="form-group">
+        <div className="form-group mb-3">
           <label>Heart Rate (bpm)</label>
           <input
             type="number"
@@ -75,9 +71,10 @@ function HealthDataForm() {
             onChange={handleChange}
             className="form-control"
             required
+            disabled={loading}
           />
         </div>
-        <div className="form-group">
+        <div className="form-group mb-3">
           <label>Systolic Blood Pressure (mmHg)</label>
           <input
             type="number"
@@ -86,9 +83,10 @@ function HealthDataForm() {
             onChange={handleChange}
             className="form-control"
             required
+            disabled={loading}
           />
         </div>
-        <div className="form-group">
+        <div className="form-group mb-3">
           <label>Diastolic Blood Pressure (mmHg)</label>
           <input
             type="number"
@@ -97,9 +95,10 @@ function HealthDataForm() {
             onChange={handleChange}
             className="form-control"
             required
+            disabled={loading}
           />
         </div>
-        <div className="form-group">
+        <div className="form-group mb-3">
           <label>Respiratory Rate (breaths/min)</label>
           <input
             type="number"
@@ -108,9 +107,10 @@ function HealthDataForm() {
             onChange={handleChange}
             className="form-control"
             required
+            disabled={loading}
           />
         </div>
-        <div className="form-group">
+        <div className="form-group mb-3">
           <label>Body Temperature (°C)</label>
           <input
             type="number"
@@ -119,13 +119,14 @@ function HealthDataForm() {
             onChange={handleChange}
             className="form-control"
             required
+            step="0.1"
+            disabled={loading}
           />
         </div>
-        <button type="submit" className="btn btn-primary">
-          Submit
+        <button type="submit" className="btn btn-primary" disabled={loading}>
+          {loading ? "Submitting..." : "Submit"}
         </button>
       </form>
-      {message && <p>{message}</p>}
     </div>
   );
 }

@@ -1,32 +1,21 @@
 {
-  "name": "hcltech_hackathon",
+  "name": "clinical-health-system-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend for Clinical Health System",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Aashish-Choudhary-02/HCLTech_Hackathon.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Aashish-Choudhary-02/HCLTech_Hackathon/issues"
-  },
-  "homepage": "https://github.com/Aashish-Choudhary-02/HCLTech_Hackathon#readme",
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "googleapi": "^1.0.2",
-    "googleapis": "^144.0.0",
-    "it": "^1.1.1",
-    "node": "^22.13.0",
-    "nodemailer": "^6.9.16",
-    "nodemon": "^3.1.9",
-    "pg": "^8.13.1"
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "nodemailer": "^7.0.2",
+    "pg": "^8.11.0",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
   }
 }

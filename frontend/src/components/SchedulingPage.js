@@ -1,10 +1,14 @@
 import React, { useState } from "react";
+import { apiCall } from '../config/api';
 
 const SchedulingPage = () => {
   const [filters, setFilters] = useState({ ageMin: "", ageMax: "", gender: "" });
   const [trialName, setTrialName] = useState("");
   const [participants, setParticipants] = useState([]);
   const [selectedParticipants, setSelectedParticipants] = useState([]);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [fetchingParticipants, setFetchingParticipants] = useState(false);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -12,18 +16,18 @@ const SchedulingPage = () => {
   };
 
   const fetchParticipants = async () => {
+    setFetchingParticipants(true);
+    setMessage("");
     try {
-      const response = await fetch(
-        `http://localhost:8080/crc/participants?ageMin=${filters.ageMin}&ageMax=${filters.ageMax}&gender=${filters.gender}`
-      );
-      const data = await response.json();
-      if (response.ok) {
-        setParticipants(data.participants);
-      } else {
-        alert("Failed to fetch participants");
+      const data = await apiCall(`/crc/participants?ageMin=${filters.ageMin}&ageMax=${filters.ageMax}&gender=${filters.gender}`);
+      setParticipants(data.participants);
+      if (data.participants.length === 0) {
+        setMessage("No participants match the selected criteria.");
       }
     } catch (error) {
-      console.error("Error fetching participants:", error);
+      setMessage("Failed to fetch participants: " + (error?.response?.data?.error || error.message || "Unknown error"));
+    } finally {
+      setFetchingParticipants(false);
     }
   };
 
@@ -39,31 +43,35 @@ const SchedulingPage = () => {
     setTrialName(e.target.value);
   };
 
-  const sendEmails = async () => {
+  const scheduleTrial = async () => {
     if (!trialName) {
-      alert("Please enter a trial name.");
+      setMessage("Please enter a trial name.");
       return;
     }
+    
+    if (selectedParticipants.length === 0) {
+      setMessage("Please select at least one participant.");
+      return;
+    }
+    
+    setLoading(true);
+    setMessage("");
     try {
-      const response = await fetch("http://localhost:8080/crc/schedule", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trialName, participantIds: selectedParticipants }),
-      });
-
-      if (response.ok) {
-        alert("Emails sent successfully!");
-      } else {
-        alert("Failed to send emails.");
-      }
+      const data = await apiCall('/crc/schedule', 'POST', { trialName, participantIds: selectedParticipants });
+      setMessage("Trial scheduled successfully!");
+      setSelectedParticipants([]);
+      setTrialName("");
     } catch (error) {
-      console.error("Error sending emails:", error);
+      setMessage("Failed to schedule trial: " + (error?.response?.data?.error || error.message || "Unknown error"));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="container mt-4">
       <h1 className="text-center mb-4">Schedule a Trial</h1>
+      {message && <div className={message.includes("successfully") ? "alert alert-success" : "alert alert-info"}>{message}</div>}
       <div className="mb-4">
         <h3>Filter Participants</h3>
         <div className="row">
@@ -75,6 +83,7 @@ const SchedulingPage = () => {
               name="ageMin"
               value={filters.ageMin}
               onChange={handleFilterChange}
+              disabled={fetchingParticipants}
             />
           </div>
           <div className="col-md-4">
@@ -85,6 +94,7 @@ const SchedulingPage = () => {
               name="ageMax"
               value={filters.ageMax}
               onChange={handleFilterChange}
+              disabled={fetchingParticipants}
             />
           </div>
           <div className="col-md-4">
@@ -94,66 +104,81 @@ const SchedulingPage = () => {
               name="gender"
               value={filters.gender}
               onChange={handleFilterChange}
+              disabled={fetchingParticipants}
             >
               <option value="">Select Gender</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
+              <option value="Non-Binary">Non-Binary</option>
             </select>
           </div>
         </div>
-        <button onClick={fetchParticipants} className="btn btn-primary mt-3">
-          Apply Filters
+        <button 
+          onClick={fetchParticipants} 
+          className="btn btn-primary mt-3"
+          disabled={fetchingParticipants}
+        >
+          {fetchingParticipants ? "Loading..." : "Apply Filters"}
         </button>
       </div>
 
-      <div>
+      <div className="mb-4">
         <h3>Participants</h3>
         {participants.length === 0 ? (
-          <p>No participants found.</p>
+          <p>No participants found. Apply filters to search.</p>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Select</th>
-                <th>Name</th>
-                <th>Age</th>
-                <th>Email</th>
-              </tr>
-            </thead>
-            <tbody>
-              {participants.map((participant) => (
-                <tr key={participant.id}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selectedParticipants.includes(participant.id)}
-                      onChange={() => handleParticipantSelection(participant.id)}
-                    />
-                  </td>
-                  <td>{participant.name}</td>
-                  <td>{participant.age}</td>
-                  <td>{participant.email}</td>
+          <div className="table-responsive">
+            <table className="table table-striped">
+              <thead>
+                <tr>
+                  <th>Select</th>
+                  <th>Name</th>
+                  <th>Age</th>
+                  <th>Email</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {participants.map((participant) => (
+                  <tr key={participant.id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedParticipants.includes(participant.id)}
+                        onChange={() => handleParticipantSelection(participant.id)}
+                        className="form-check-input"
+                        disabled={loading}
+                      />
+                    </td>
+                    <td>{participant.name}</td>
+                    <td>{participant.age}</td>
+                    <td>{participant.email}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      <div>
-        <label>Trial Name</label>
-        <input
-          type="text"
-          className="form-control"
-          value={trialName}
-          onChange={handleTrialNameChange}
-        />
+      <div className="mb-4">
+        <h3>Schedule Trial</h3>
+        <div className="mb-3">
+          <label>Trial Name</label>
+          <input
+            type="text"
+            className="form-control"
+            value={trialName}
+            onChange={handleTrialNameChange}
+            placeholder="Enter trial name"
+            disabled={loading}
+          />
+        </div>
         <button
-          className="btn btn-success mt-3"
-          onClick={sendEmails}
-          disabled={selectedParticipants.length === 0}
+          className="btn btn-success"
+          onClick={scheduleTrial}
+          disabled={selectedParticipants.length === 0 || !trialName || loading}
         >
-          Send Emails
+          {loading ? "Scheduling..." : "Schedule Trial"}
         </button>
       </div>
     </div>

@@ -1,53 +1,101 @@
 const express = require('express');
 const path = require('path');
-const dotenv = require('dotenv');
 const cors = require('cors');
+require('dotenv').config();
+const db = require('./db');
+
+// Import routes
 const authRoutes = require('./routes/auth');
 const crcRoutes = require('./routes/crc');
 const piRoutes = require('./routes/pi');
 const adminRoutes = require('./routes/admin');
 
-dotenv.config();
-
 const app = express();
-app.use(express.json());
 
-// Allow requests from the frontend
+// Basic middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// CORS configuration
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'http://localhost:8080'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Middleware to log requests
+// Request logging middleware
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Request Body:', req.body);
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
 
-// Register API routes
-app.use('/auth', authRoutes);
-app.use('/crc', crcRoutes);
-app.use('/pi', piRoutes);
-app.use('/admin', adminRoutes);
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/crc', crcRoutes);
+app.use('/api/pi', piRoutes);
+app.use('/api/admin', adminRoutes);
 
-// Serve React frontend files from public/build
-app.use(express.static(path.join(__dirname, 'public', 'build')));
-
-// Catch-all route to serve React app for any other route
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'build', 'index.html'));
+// Test route
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working!' });
 });
 
-// Handle undefined API routes
-app.use((req, res) => {
-  console.error(`Route not found: ${req.method} ${req.url}`);
-  res.status(404).json({ error: 'Route not found' });
+// 404 handler
+app.use((req, res, next) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Cannot ${req.method} ${req.url}`
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+
+  // Handle specific error types
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      error: 'Validation Error',
+      message: err.message
+    });
+  }
+
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Invalid token or no token provided'
+    });
+  }
+
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    return res.status(409).json({
+      error: 'Conflict',
+      message: 'Resource already exists'
+    });
+  }
+
+  // Database errors
+  if (err.name === 'SequelizeDatabaseError') {
+    return res.status(500).json({
+      error: 'Database Error',
+      message: 'A database error occurred'
+    });
+  }
+
+  // Default error
+  res.status(err.status || 500).json({
+    error: err.name || 'Internal Server Error',
+    message: err.message || 'Something went wrong!',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
 });
 
 // Start server
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+}).on('error', (err) => {
+  console.error('Server failed to start:', err);
+  process.exit(1);
 });

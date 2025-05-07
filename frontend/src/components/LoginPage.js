@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiCall } from '../config/api';
 
 const LoginPage = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -8,6 +9,7 @@ const LoginPage = ({ onLogin }) => {
     role: "CRC",
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -24,34 +26,23 @@ const LoginPage = ({ onLogin }) => {
       return;
     }
   
+    setLoading(true);
+    setError("");
+    
     try {
-      console.log("Sending Request:", { email, password, role }); // Log payload
-      const response = await fetch("http://localhost:8080/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role }),
-      });
-  
-      console.log("Response Status:", response.status); // Log status
-      const data = await response.json();
-      console.log("Response Data:", data); // Log response data
-  
-      if (response.ok) {
-        onLogin();
-        navigate(role === "CRC" ? "/CRC" : "/PI");
-      } else {
-        setError(data.error || "Invalid credentials");
-      }
+      const data = await apiCall('/auth/login', 'POST', { email, password, role });
+      onLogin(role);
+      navigate(role === "CRC" ? "/CRC" : "/PI");
     } catch (err) {
-      console.error("Error in login request:", err);
-      setError("Internal server error. Please try again.");
+      setError(err?.response?.data?.error || err.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
     }
   };
    
-
   return (
     <div style={styles.container}>
-      <h2 style={styles.heading}>Login</h2>
+      <h2 style={styles.heading}>Clinical Trial Participant Management</h2>
       <form onSubmit={handleSubmit} style={styles.form}>
         {error && <p style={styles.error}>{error}</p>}
         <label style={styles.label}>Email:</label>
@@ -62,6 +53,7 @@ const LoginPage = ({ onLogin }) => {
           onChange={handleChange}
           style={styles.input}
           placeholder="Enter your email"
+          disabled={loading}
         />
         <label style={styles.label}>Password:</label>
         <input
@@ -71,6 +63,7 @@ const LoginPage = ({ onLogin }) => {
           onChange={handleChange}
           style={styles.input}
           placeholder="Enter your password"
+          disabled={loading}
         />
         <label style={styles.label}>Role:</label>
         <select
@@ -78,12 +71,13 @@ const LoginPage = ({ onLogin }) => {
           value={formData.role}
           onChange={handleChange}
           style={styles.input}
+          disabled={loading}
         >
-          <option value="CRC">CRC</option>
-          <option value="PI">PI</option>
+          <option value="CRC">Clinical Research Coordinator (CRC)</option>
+          <option value="PI">Principal Investigator (PI)</option>
         </select>
-        <button type="submit" style={styles.button}>
-          Login
+        <button type="submit" style={styles.button} disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
         </button>
       </form>
     </div>
